@@ -234,28 +234,31 @@
     <!-- 惊喜层 -->
     <div id="surprise-layer" class="hidden">
         <button id="reveal-btn" class="safe-click-area hidden px-10 py-5 bg-white text-pink-600 rounded-full font-bold text-2xl shadow-[0_0_60px_rgba(255,105,180,0.8)] hover:scale-105 transition-transform duration-300 animate-float">🎁 打开礼物</button>
-        
+
         <div id="flip-card-container" class="hidden flip-card w-full max-w-sm md:max-w-md aspect-[3/4] mx-6 pop-in">
             <div class="flip-card-inner">
                 <!-- 正面 -->
                 <div class="flip-card-front glass-panel bg-gradient-to-br from-pink-500/40 to-purple-600/40 border border-white/30 p-1">
                     <div class="bg-black/80 rounded-[1rem] p-6 h-full flex flex-col backdrop-blur-md">
-                        <div class="w-full aspect-[4/3] bg-gray-800 rounded-lg mb-6 overflow-hidden relative border border-white/10 shadow-inner">
-                            <img src="./src/fmhk.jpg" class="w-full h-full object-cover" alt="Gift">
-                            <div class="absolute bottom-3 left-4 text-white/90 font-handwriting text-2xl">Happy Birthday!</div>
+                        <div class="mb-4 text-5xl animate-bounce">💌</div>
+                        <h3 class="text-2xl font-bold text-pink-300 mb-5 font-handwriting">致最特别的李丨楠</h3>
+                        <div id="front-typewriter-text" class="text-left text-gray-200 font-light leading-7 text-sm md:text-base border-l-2 border-pink-500/50 pl-4 mb-6 w-full">
+                            通知：<br>
+                            鉴于你最近表现良好，特批你在今天拥有特权：<br>
+                            1.可以暂时不减肥（因为今天你最美）；<br>
+                            2.可以暂时忘掉烦恼（因为今天是你的主场）；<br>
+                            3.必须无条件收下我的祝福（因为这是上帝（我）的安排）。<br>
+                            最重要的是：生日快乐，以后的日子，继续一起疯，一起闹，一起暴富发大财！
                         </div>
-                        <div class="text-center mt-auto mb-8">
-                            <p class="text-gray-300 mb-6 font-light leading-relaxed">这不仅仅是一场数字烟花，<br>更是为你准备的专属时刻。</p>
-                            <button id="next-surprise-btn" class="safe-click-area w-full py-3 bg-gradient-to-r from-pink-600 to-purple-700 rounded-xl font-bold text-white shadow-lg hover:brightness-110 active:scale-95 transition">What's the surprise? ✨</button>
-                        </div>
+                        <button id="next-surprise-btn" class="safe-click-area w-full py-3 bg-gradient-to-r from-pink-600 to-purple-700 rounded-xl font-bold text-white shadow-lg hover:brightness-110 active:scale-95 transition">点击翻到背面继续看 ✨</button>
                     </div>
                 </div>
                 <!-- 背面 -->
                 <div class="flip-card-back glass-panel bg-gradient-to-br from-purple-500/40 to-blue-600/40 border border-white/30 p-1">
-                    <div class="bg-black/90 rounded-[1rem] p-8 h-full flex flex-col items-center justify-center backdrop-blur-md">
-                        <div class="mb-6 text-5xl animate-bounce">💌</div>
-                        <h3 class="text-2xl font-bold text-pink-300 mb-6 font-handwriting">致最特别的李丨楠</h3>
-                        <div id="typewriter-text" class="text-left text-gray-200 space-y-4 font-light leading-7 text-sm md:text-base border-l-2 border-pink-500/50 pl-4 mb-8 min-h-[120px] w-full"></div>
+                    <div class="bg-black/90 rounded-[1rem] p-6 h-full flex flex-col items-center justify-center backdrop-blur-md">
+                        <div class="mb-4 text-5xl animate-bounce">💌</div>
+                        <h3 class="text-2xl font-bold text-pink-300 mb-5 font-handwriting">致最特别的李丨楠</h3>
+                        <div id="typewriter-text" class="text-left text-gray-200 space-y-4 font-light leading-7 text-sm md:text-base border-l-2 border-pink-500/50 pl-4 mb-6 min-h-[120px] w-full"></div>
                         <button id="close-card-btn" class="safe-click-area px-8 py-2 rounded-full border border-white/30 text-gray-300 hover:bg-white/10 hover:text-white transition text-sm">收起卡片</button>
                     </div>
                 </div>
@@ -298,6 +301,7 @@
         let blowProgress = 0;
         let isSpacePressed = false; 
         let isTouching = false; 
+        let cameraFallbackTimer = null;
         
         let rotationVelocity = 0;
         let isDragging = false;
@@ -323,6 +327,7 @@
             revealBtn: document.getElementById('reveal-btn'),
             floatingGiftBtn: document.getElementById('floating-gift-btn'),
             cardContainer: document.getElementById('flip-card-container'), 
+            frontTypewriter: document.getElementById('front-typewriter-text'),
             typewriter: document.getElementById('typewriter-text'),
             nextBtn: document.getElementById('next-surprise-btn'),
             closeBtn: document.getElementById('close-card-btn'),
@@ -721,32 +726,46 @@
             "因为我也还没看过呢！😆"
         ];
 
-        function startTypewriter() {
-            let lineIndex = 0;
+        const typewriterTimers = {};
+
+        function streamText(target, startLine, endLine, timerName) {
+            let lineIndex = startLine;
             let charIndex = 0;
-            ui.typewriter.innerHTML = "";
+            target.innerHTML = "";
+            if (typewriterTimers[timerName]) clearTimeout(typewriterTimers[timerName]);
+
             function type() {
-                if (lineIndex < wishes.length) {
+                if (lineIndex < endLine) {
                     const currentLine = wishes[lineIndex];
                     if (charIndex < currentLine.length) {
-                        ui.typewriter.innerHTML += currentLine.charAt(charIndex);
+                        target.innerHTML += currentLine.charAt(charIndex);
                         charIndex++;
-                        setTimeout(type, 100);
+                        typewriterTimers[timerName] = setTimeout(type, 100);
                     } else {
-                        ui.typewriter.innerHTML += "<br>";
+                        target.innerHTML += "<br>";
                         lineIndex++;
                         charIndex = 0;
-                        setTimeout(type, 300);
+                        typewriterTimers[timerName] = setTimeout(type, 300);
                     }
                 }
             }
             type();
         }
 
+        function startFrontTypewriter() {
+            streamText(ui.frontTypewriter, 0, 6, 'frontTypewriterTimer');
+        }
+
+        function startTypewriter() {
+            streamText(ui.typewriter, 6, wishes.length, 'typewriterTimer');
+        }
+
         ui.revealBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             ui.revealBtn.classList.add('hidden');
             ui.cardContainer.classList.remove('hidden');
+            ui.cardContainer.classList.remove('flipped');
+            startFrontTypewriter();
         });
 
         ui.floatingGiftBtn.addEventListener('click', (e) => {
@@ -757,10 +776,12 @@
             interactionMode = 0;
             ui.cardContainer.classList.remove('hidden');
             ui.cardContainer.classList.remove('flipped');
+            startFrontTypewriter();
         });
 
         ui.nextBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            if (typewriterTimers.frontTypewriterTimer) clearTimeout(typewriterTimers.frontTypewriterTimer);
             ui.cardContainer.classList.add('flipped');
             setTimeout(startTypewriter, 400);
         });
@@ -775,6 +796,9 @@
             interactionMode = 1; 
             transitionTo('cake'); 
             ui.statusText.innerText = "INTERACTIVE MODE: DRAG TO ROTATE";
+            if (typewriterTimers.frontTypewriterTimer) clearTimeout(typewriterTimers.frontTypewriterTimer);
+            if (typewriterTimers.typewriterTimer) clearTimeout(typewriterTimers.typewriterTimer);
+            ui.frontTypewriter.innerHTML = "";
             ui.typewriter.innerHTML = ""; 
             ui.topBanner.classList.remove('hidden');
         });
@@ -807,7 +831,8 @@
                 log('摄像头启动成功');
             } catch (e) {
                 log('摄像头/MediaPipe 失败: ' + e);
-                ui.statusText.innerText = "CAMERA FAILED - USE SPACEBAR";
+                ui.statusText.innerText = "CAMERA FAILED - AUTO START IN 15S";
+                scheduleCameraFallback();
             }
             
             log('进入主界面...');
@@ -815,6 +840,22 @@
             ui.startOverlay.classList.add('hidden');
             ui.uiLayer.style.display = 'flex';
         });
+
+        function scheduleCameraFallback() {
+            if (cameraFallbackTimer) clearTimeout(cameraFallbackTimer);
+            ui.camStatusDot.className = "w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_#facc15]";
+            ui.camStatusText.innerText = "AUTO 15S";
+            ui.camStatusText.className = "text-[8px] text-yellow-300 font-mono font-bold";
+
+            cameraFallbackTimer = setTimeout(() => {
+                if (currentState !== STATE.IDLE || transitionLock) return;
+                log('Camera unavailable: auto hand detected after 15 seconds.');
+                ui.camStatusDot.className = "w-1.5 h-1.5 rounded-full bg-green-400 shadow-[0_0_8px_#4ade80]";
+                ui.camStatusText.innerText = "AUTO";
+                ui.camStatusText.className = "text-[8px] text-green-400 font-mono font-bold";
+                startSequence();
+            }, 15000);
+        }
 
         async function initAudio() {
             try {
